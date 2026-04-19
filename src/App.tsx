@@ -80,14 +80,30 @@ export default function App() {
         setIsLocating(false);
         setPermissionNote("Bầu trời đang chạy theo vị trí của bạn.");
       },
-      (error) => {
+      async (error) => {
         if (cancelled) return;
+
+        // If GPS is slow/unavailable, use coarse network location so sky phase still tracks roughly.
+        if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+          const approximateCoords = await fetchApproximateCoordsByIp();
+          if (cancelled) return;
+
+          if (approximateCoords) {
+            setCoords(approximateCoords);
+            setIsLocating(false);
+            setPermissionNote(
+              "GPS đang chậm nên ứng dụng dùng vị trí ước lượng theo mạng. Bạn vẫn có thể bấm thử lại để lấy vị trí chính xác hơn.",
+            );
+            return;
+          }
+        }
+
         setCoords(null);
         setIsLocating(false);
         setPermissionNote(messageForGeoError(error));
       },
       {
-        enableHighAccuracy: true,
+        enableHighAccuracy: false,
         timeout: 20_000,
         maximumAge: 300_000,
       },
@@ -145,6 +161,27 @@ export default function App() {
       </section>
     </main>
   );
+}
+
+async function fetchApproximateCoordsByIp(): Promise<Coordinates | null> {
+  try {
+    const response = await fetch("https://ipapi.co/json/");
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as { latitude?: unknown; longitude?: unknown };
+    const lat = Number(payload.latitude);
+    const lon = Number(payload.longitude);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      return null;
+    }
+
+    return { lat, lon };
+  } catch {
+    return null;
+  }
 }
 
 function messageForGeoError(error: GeolocationPositionError) {
