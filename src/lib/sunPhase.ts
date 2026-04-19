@@ -77,6 +77,50 @@ export function getFallbackPhaseByLocalTime(date: Date): SkyPhase {
   return "night";
 }
 
+export function getFallbackPhaseByTimeZone(date: Date, timeZone: string): SkyPhase {
+  const hour = getHourInTimeZone(date, timeZone);
+  if (hour === null) {
+    return getFallbackPhaseByLocalTime(date);
+  }
+
+  if (hour >= 0 && hour < 5) return "night";
+  if (hour >= 5 && hour < 6) return "dawn";
+  if (hour >= 6 && hour < 11) return "morning";
+  if (hour >= 11 && hour < 13) return "noon";
+  if (hour >= 13 && hour < 17) return "afternoon";
+  if (hour >= 17 && hour < 18) return "sunset";
+  if (hour >= 18 && hour < 19) return "dusk";
+  return "night";
+}
+
+export function getSkySnapshotByTimeZone(date: Date, timeZone: string): SkySnapshot {
+  return {
+    phase: getFallbackPhaseByTimeZone(date, timeZone),
+    source: "fallback",
+    altitudeDeg: null,
+  };
+}
+
+function getHourInTimeZone(date: Date, timeZone: string): number | null {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      hour: "2-digit",
+      hour12: false,
+      timeZone,
+    });
+    const hourPart = formatter.formatToParts(date).find((part) => part.type === "hour")?.value;
+    const hour = Number(hourPart);
+
+    if (!Number.isFinite(hour)) {
+      return null;
+    }
+
+    return hour;
+  } catch {
+    return null;
+  }
+}
+
 export function pickPoem(phase: SkyPhase, pool: Record<SkyPhase, string[]>, seed: number): string {
   const options = pool[phase];
   if (!options || options.length === 0) {

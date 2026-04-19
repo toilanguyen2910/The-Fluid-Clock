@@ -72,6 +72,32 @@ body,
   margin-top: clamp(16px, 2.5vw, 24px);
 }
 
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.timezone-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.timezone-select {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(15, 23, 53, 0.55);
+  color: #eef2ff;
+  font-size: 0.9rem;
+}
+
+.timezone-select:disabled {
+  opacity: 0.65;
+}
+
 .retry-button {
   margin-top: 12px;
   padding: 9px 14px;
@@ -92,6 +118,11 @@ body,
 .retry-button:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.retry-button.ghost {
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .cloud-layer {

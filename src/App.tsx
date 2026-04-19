@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { poemsByPhase } from "./content/poems.vi";
 import {
   getSkySnapshot,
+  getSkySnapshotByTimeZone,
   pickPoemAvoidRecent,
   type Coordinates,
   type SkyPhase,
@@ -9,6 +10,16 @@ import {
 
 const TICK_INTERVAL_MS = 60_000;
 const POEM_ROTATION_MS = 4 * 60_000;
+const TIMEZONE_OPTIONS = [
+  "Asia/Ho_Chi_Minh",
+  "Asia/Bangkok",
+  "Asia/Tokyo",
+  "Europe/London",
+  "Europe/Paris",
+  "America/New_York",
+  "America/Los_Angeles",
+  "Australia/Sydney",
+];
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
@@ -27,11 +38,16 @@ function usePrefersReducedMotion() {
 
 export default function App() {
   const [coords, setCoords] = useState<Coordinates | null>(null);
-  const [permissionNote, setPermissionNote] = useState("Đang tìm vị trí của bạn...");
+  const [permissionNote, setPermissionNote] = useState("Bầu trời đang chạy theo vị trí của bạn.");
   const [now, setNow] = useState(() => new Date());
   const [poemSeed, setPoemSeed] = useState(() => Date.now());
   const [poem, setPoem] = useState("Trời đang đợi bạn mở mắt thật chậm...");
-  const [isLocating, setIsLocating] = useState(true);
+  const [isLocating, setIsLocating] = useState(false);
+  const [usePreciseLocation, setUsePreciseLocation] = useState(false);
+  const [selectedTimeZone, setSelectedTimeZone] = useState(() => {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return zone || "Asia/Ho_Chi_Minh";
+  });
   const recentPoems = useRef<Record<SkyPhase, string[]>>({
     night: [],
     dawn: [],
@@ -116,10 +132,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    requestLocation();
-  }, [requestLocation]);
-
-  useEffect(() => {
     const tick = window.setInterval(() => setNow(new Date()), TICK_INTERVAL_MS);
     return () => window.clearInterval(tick);
   }, []);
@@ -129,7 +141,21 @@ export default function App() {
     return () => window.clearInterval(rotation);
   }, []);
 
-  const snapshot = useMemo(() => getSkySnapshot(now, coords), [coords, now]);
+  const snapshot = useMemo(() => {
+    if (usePreciseLocation && coords) {
+      return getSkySnapshot(now, coords);
+    }
+
+    return getSkySnapshotByTimeZone(now, selectedTimeZone);
+  }, [coords, now, selectedTimeZone, usePreciseLocation]);
+
+  const helperNote = useMemo(() => {
+    if (usePreciseLocation) {
+      return permissionNote;
+    }
+
+    return `Đang dùng múi giờ ${selectedTimeZone} (không cần chia sẻ vị trí).`;
+  }, [permissionNote, selectedTimeZone, usePreciseLocation]);
 
   useEffect(() => {
     const recent = recentPoems.current[snapshot.phase].slice(0, 4);
@@ -153,15 +179,52 @@ export default function App() {
       <section className="panel">
         <p className="phase-label">{labelForPhase(snapshot.phase)}</p>
         <p className="poem">{poem}</p>
-        <p className="helper">{permissionNote}</p>
-        <button
-          className="retry-button"
-          type="button"
-          onClick={requestLocation}
-          disabled={isLocating}
-        >
-          {isLocating ? "Đang lấy vị trí..." : "Thử lại lấy vị trí"}
-        </button>
+        <div className="controls" aria-label="Tuỳ chọn thời gian và vị trí">
+          <label className="timezone-label" htmlFor="timezone-select">
+            Múi giờ:
+          </label>
+          <select
+            id="timezone-select"
+            className="timezone-select"
+            value={selectedTimeZone}
+            onChange={(event) => setSelectedTimeZone(event.target.value)}
+            disabled={usePreciseLocation}
+          >
+            {TIMEZONE_OPTIONS.map((timeZone) => (
+              <option key={timeZone} value={timeZone}>
+                {timeZone}
+              </option>
+            ))}
+          </select>
+
+          <button
+            className="retry-button"
+            type="button"
+            onClick={() => {
+              if (usePreciseLocation) {
+                setUsePreciseLocation(false);
+                setIsLocating(false);
+                return;
+              }
+
+              setUsePreciseLocation(true);
+              requestLocation();
+            }}
+            disabled={isLocating}
+          >
+            {isLocating
+              ? "Đang lấy vị trí..."
+              : usePreciseLocation
+                ? "Dùng theo múi giờ"
+                : "Dùng vị trí chính xác"}
+          </button>
+        </div>
+        {usePreciseLocation ? (
+          <button className="retry-button ghost" type="button" onClick={requestLocation} disabled={isLocating}>
+            Thử lại lấy vị trí
+          </button>
+        ) : null}
+        <p className="helper">{helperNote}</p>
         <p className="altitude">{describeSkyHeight(snapshot.altitudeDeg, snapshot.source)}</p>
       </section>
     </main>

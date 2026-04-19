@@ -4,13 +4,14 @@ A poetic web clock that does not show numeric time. The interface changes with t
 
 ## Features
 
-- Geolocation-based sky mood using `SunCalc` (sun position + sunrise/sunset windows)
+- Timezone-first sky mood (no location required by default)
+- Optional precise location mode using `SunCalc` (sun position + sunrise/sunset windows)
 - No numeric hours/minutes on screen
 - Dynamic CSS gradients and cloud motion by sky phase
 - Sun/moon/star visual layers that shift by sky phase
 - Rich Vietnamese lines per phase, rotated with early-repeat avoidance
 - Mobile-first typography and glass panel tuning for a softer reading vibe
-- Graceful fallback when location is denied
+- Graceful fallback when location is denied or slow
 - Reduced-motion support via `prefers-reduced-motion`
 
 ## Tech
