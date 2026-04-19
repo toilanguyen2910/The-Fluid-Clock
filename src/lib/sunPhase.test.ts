@@ -31,7 +31,7 @@ describe("pickPoem", () => {
 
   it("returns default fallback when pool empty", () => {
     const emptyPool = { ...pool, dusk: [] };
-    expect(pickPoem("dusk", emptyPool, 1)).toContain("bau troi");
+    expect(pickPoem("dusk", emptyPool, 1)).toContain("bầu trời");
   });
 });
 

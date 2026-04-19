@@ -27,10 +27,12 @@ function usePrefersReducedMotion() {
 
 export default function App() {
   const [coords, setCoords] = useState<Coordinates | null>(null);
-  const [permissionNote, setPermissionNote] = useState("Dang tim vi tri cua ban...");
+  const [permissionNote, setPermissionNote] = useState("Đang tìm vị trí của bạn...");
   const [now, setNow] = useState(() => new Date());
   const [poemSeed, setPoemSeed] = useState(() => Date.now());
-  const [poem, setPoem] = useState("Troi dang doi ban mo mat that cham...");
+  const [poem, setPoem] = useState("Trời đang đợi bạn mở mắt thật chậm...");
+  const [isLocating, setIsLocating] = useState(true);
+  const [locationRequestId, setLocationRequestId] = useState(0);
   const recentPoems = useRef<Record<SkyPhase, string[]>>({
     night: [],
     dawn: [],
@@ -43,28 +45,58 @@ export default function App() {
   const reduceMotion = usePrefersReducedMotion();
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!("geolocation" in navigator)) {
-      setPermissionNote("Trinh duyet khong ho tro vi tri. Dang dung che do bau troi uoc luong.");
+      setIsLocating(false);
+      setPermissionNote("Trình duyệt không hỗ trợ vị trí. Đang dùng chế độ bầu trời ước lượng.");
       return;
+    }
+
+    setIsLocating(true);
+
+    if ("permissions" in navigator) {
+      void navigator.permissions
+        .query({ name: "geolocation" })
+        .then((result) => {
+          if (!cancelled && result.state === "denied") {
+            setPermissionNote(
+              "Trình duyệt đang chặn vị trí. Bạn bấm biểu tượng ổ khóa cạnh URL để bật lại quyền vị trí.",
+            );
+          }
+        })
+        .catch(() => {
+          // Browser may not fully support the Permissions API.
+        });
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (cancelled) return;
         setCoords({
           lat: position.coords.latitude,
           lon: position.coords.longitude,
         });
-        setPermissionNote("Bau troi dang chay theo vi tri cua ban.");
+        setIsLocating(false);
+        setPermissionNote("Bầu trời đang chạy theo vị trí của bạn.");
       },
-      () => {
-        setPermissionNote("Ban chua cap vi tri. Van co bau troi nhe theo gio dia phuong.");
+      (error) => {
+        if (cancelled) return;
+        setCoords(null);
+        setIsLocating(false);
+        setPermissionNote(messageForGeoError(error));
       },
       {
-        enableHighAccuracy: false,
-        timeout: 10_000,
+        enableHighAccuracy: true,
+        timeout: 20_000,
+        maximumAge: 300_000,
       },
     );
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locationRequestId]);
 
   useEffect(() => {
     const tick = window.setInterval(() => setNow(new Date()), TICK_INTERVAL_MS);
@@ -101,41 +133,62 @@ export default function App() {
         <p className="phase-label">{labelForPhase(snapshot.phase)}</p>
         <p className="poem">{poem}</p>
         <p className="helper">{permissionNote}</p>
+        <button
+          className="retry-button"
+          type="button"
+          onClick={() => setLocationRequestId((value) => value + 1)}
+          disabled={isLocating}
+        >
+          {isLocating ? "Đang lấy vị trí..." : "Thử lại lấy vị trí"}
+        </button>
         <p className="altitude">{describeSkyHeight(snapshot.altitudeDeg, snapshot.source)}</p>
       </section>
     </main>
   );
 }
 
+function messageForGeoError(error: GeolocationPositionError) {
+  switch (error.code) {
+    case error.PERMISSION_DENIED:
+      return "Bạn chưa cấp vị trí. Vẫn có bầu trời nhẹ theo giờ địa phương.";
+    case error.POSITION_UNAVAILABLE:
+      return "Không lấy được vị trí hiện tại. Bạn thử bật Wi-Fi hoặc GPS rồi bấm thử lại.";
+    case error.TIMEOUT:
+      return "Lấy vị trí bị quá thời gian. Bạn bấm thử lại để ứng dụng xin vị trí lần nữa.";
+    default:
+      return "Không thể lấy vị trí lúc này. Ứng dụng đang chạy theo nhịp trời địa phương.";
+  }
+}
+
 function describeSkyHeight(altitudeDeg: number | null, source: "geolocation" | "fallback") {
   if (source === "fallback" || altitudeDeg === null) {
-    return "Dang dung che do nhip troi theo gio dia phuong.";
+    return "Đang dùng chế độ nhịp trời theo giờ địa phương.";
   }
 
-  if (altitudeDeg > 45) return "Mat troi dang len cao va ro.";
-  if (altitudeDeg > 15) return "Mat troi dang nghi tren tang may mong.";
-  if (altitudeDeg > -5) return "Mat troi dang sat duong chan troi.";
-  return "Anh sang mat troi dang lui sau bau troi.";
+  if (altitudeDeg > 45) return "Mặt trời đang lên cao và rõ.";
+  if (altitudeDeg > 15) return "Mặt trời đang nghỉ trên tầng mây mỏng.";
+  if (altitudeDeg > -5) return "Mặt trời đang sát đường chân trời.";
+  return "Ánh sáng mặt trời đang lùi sau bầu trời.";
 }
 
 function labelForPhase(phase: ReturnType<typeof getSkySnapshot>["phase"]) {
   switch (phase) {
     case "night":
-      return "Dem yen";
+      return "Đêm yên";
     case "dawn":
-      return "Binh minh";
+      return "Bình minh";
     case "morning":
-      return "Buoi sang";
+      return "Buổi sáng";
     case "noon":
-      return "Giua trua";
+      return "Giữa trưa";
     case "afternoon":
-      return "Buoi chieu";
+      return "Buổi chiều";
     case "sunset":
-      return "Hoang hon";
+      return "Hoàng hôn";
     case "dusk":
-      return "Chap choang";
+      return "Chập choạng";
     default:
-      return "Khoang troi";
+      return "Khoảng trời";
   }
 }
 

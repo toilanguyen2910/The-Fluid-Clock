@@ -80,7 +80,7 @@ export function getFallbackPhaseByLocalTime(date: Date): SkyPhase {
 export function pickPoem(phase: SkyPhase, pool: Record<SkyPhase, string[]>, seed: number): string {
   const options = pool[phase];
   if (!options || options.length === 0) {
-    return "Hom nay bau troi dang nghi, ban cung nghi nhe mot chut.";
+    return "Hôm nay bầu trời đang nghỉ, bạn cũng nghỉ nhẹ một chút.";
   }
   const index = Math.abs(seed) % options.length;
   return options[index];
@@ -94,7 +94,7 @@ export function pickPoemAvoidRecent(
 ): string {
   const options = pool[phase];
   if (!options || options.length === 0) {
-    return "Hom nay bau troi dang nghi, ban cung nghi nhe mot chut.";
+    return "Hôm nay bầu trời đang nghỉ, bạn cũng nghỉ nhẹ một chút.";
   }
 
   const recentSet = new Set(recent);
