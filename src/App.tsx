@@ -157,6 +157,36 @@ export default function App() {
     return `Đang dùng múi giờ ${selectedTimeZone} (không cần chia sẻ vị trí).`;
   }, [permissionNote, selectedTimeZone, usePreciseLocation]);
 
+  const displayTimeZone = useMemo(() => {
+    if (usePreciseLocation) {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Ho_Chi_Minh";
+    }
+    return selectedTimeZone;
+  }, [selectedTimeZone, usePreciseLocation]);
+
+  const cornerDate = useMemo(
+    () =>
+      new Intl.DateTimeFormat("vi-VN", {
+        timeZone: displayTimeZone,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(now),
+    [displayTimeZone, now],
+  );
+
+  const cornerTime = useMemo(
+    () =>
+      new Intl.DateTimeFormat("vi-VN", {
+        timeZone: displayTimeZone,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }).format(now),
+    [displayTimeZone, now],
+  );
+
   useEffect(() => {
     const recent = recentPoems.current[snapshot.phase].slice(0, 4);
     const nextPoem = pickPoemAvoidRecent(snapshot.phase, poemsByPhase, poemSeed, recent);
@@ -169,6 +199,10 @@ export default function App() {
       className={`app phase-${snapshot.phase} ${reduceMotion ? "reduce-motion" : ""}`}
       aria-live="polite"
     >
+      <aside className="corner-datetime" aria-label="Ngày và giờ hiện tại">
+        <p className="corner-date">{cornerDate}</p>
+        <p className="corner-time">{cornerTime}</p>
+      </aside>
       <div className="star-field" aria-hidden="true" />
       <div className="star-field second" aria-hidden="true" />
       <div className="celestial sun" aria-hidden="true" />

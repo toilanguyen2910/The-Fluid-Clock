@@ -30,6 +30,35 @@ body,
   transition: background 3s ease;
 }
 
+.corner-datetime {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+  z-index: 4;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(10, 18, 42, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.corner-date,
+.corner-time {
+  margin: 0;
+  line-height: 1.25;
+}
+
+.corner-date {
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.corner-time {
+  margin-top: 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
 .panel {
   width: min(760px, 100%);
   background: linear-gradient(160deg, rgba(8, 15, 36, 0.42), rgba(28, 42, 84, 0.2));
@@ -299,6 +328,14 @@ body,
 @media (max-width: 520px) {
   .app {
     place-items: end center;
+  }
+
+  .corner-datetime {
+    padding: 8px 10px;
+  }
+
+  .corner-time {
+    font-size: 0.88rem;
   }
 
   .panel {
