@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { poemsByPhase } from "./content/poems.vi";
 import {
   getSkySnapshot,
@@ -32,7 +32,6 @@ export default function App() {
   const [poemSeed, setPoemSeed] = useState(() => Date.now());
   const [poem, setPoem] = useState("Trời đang đợi bạn mở mắt thật chậm...");
   const [isLocating, setIsLocating] = useState(true);
-  const [locationRequestId, setLocationRequestId] = useState(0);
   const recentPoems = useRef<Record<SkyPhase, string[]>>({
     night: [],
     dawn: [],
@@ -44,9 +43,7 @@ export default function App() {
   });
   const reduceMotion = usePrefersReducedMotion();
 
-  useEffect(() => {
-    let cancelled = false;
-
+  const requestLocation = useCallback(() => {
     if (!("geolocation" in navigator)) {
       setIsLocating(false);
       setPermissionNote("Trình duyệt không hỗ trợ vị trí. Đang dùng chế độ bầu trời ước lượng.");
@@ -59,7 +56,7 @@ export default function App() {
       void navigator.permissions
         .query({ name: "geolocation" })
         .then((result) => {
-          if (!cancelled && result.state === "denied") {
+          if (result.state === "denied") {
             setPermissionNote(
               "Trình duyệt đang chặn vị trí. Bạn bấm biểu tượng ổ khóa cạnh URL để bật lại quyền vị trí.",
             );
@@ -70,49 +67,57 @@ export default function App() {
         });
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (cancelled) return;
-        setCoords({
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
-        });
-        setIsLocating(false);
-        setPermissionNote("Bầu trời đang chạy theo vị trí của bạn.");
-      },
-      async (error) => {
-        if (cancelled) return;
+    const setFromPosition = (position: GeolocationPosition) => {
+      setCoords({
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+      });
+      setIsLocating(false);
+      setPermissionNote("Bầu trời đang chạy theo vị trí của bạn.");
+    };
 
-        // If GPS is slow/unavailable, use coarse network location so sky phase still tracks roughly.
-        if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
-          const approximateCoords = await fetchApproximateCoordsByIp();
-          if (cancelled) return;
+    const onFinalError = async (error: GeolocationPositionError) => {
+      // If GPS is slow/unavailable, use coarse network location so sky phase still tracks roughly.
+      if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+        const approximateCoords = await fetchApproximateCoordsByIp();
 
-          if (approximateCoords) {
-            setCoords(approximateCoords);
-            setIsLocating(false);
-            setPermissionNote(
-              "GPS đang chậm nên ứng dụng dùng vị trí ước lượng theo mạng. Bạn vẫn có thể bấm thử lại để lấy vị trí chính xác hơn.",
-            );
-            return;
-          }
+        if (approximateCoords) {
+          setCoords(approximateCoords);
+          setIsLocating(false);
+          setPermissionNote(
+            "GPS đang chậm nên ứng dụng dùng vị trí ước lượng theo mạng. Bạn vẫn có thể bấm thử lại để lấy vị trí chính xác hơn.",
+          );
+          return;
         }
+      }
 
-        setCoords(null);
-        setIsLocating(false);
-        setPermissionNote(messageForGeoError(error));
+      setCoords(null);
+      setIsLocating(false);
+      setPermissionNote(messageForGeoError(error));
+    };
+
+    // Step 1: try cached location quickly (works better on iOS after Maps has cached location).
+    navigator.geolocation.getCurrentPosition(
+      setFromPosition,
+      () => {
+        // Step 2: if no cache available, request a fresh location with a longer timeout.
+        navigator.geolocation.getCurrentPosition(setFromPosition, onFinalError, {
+          enableHighAccuracy: false,
+          timeout: 60_000,
+          maximumAge: 300_000,
+        });
       },
       {
         enableHighAccuracy: false,
-        timeout: 20_000,
-        maximumAge: 300_000,
+        timeout: 2_500,
+        maximumAge: Infinity,
       },
     );
+  }, []);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [locationRequestId]);
+  useEffect(() => {
+    requestLocation();
+  }, [requestLocation]);
 
   useEffect(() => {
     const tick = window.setInterval(() => setNow(new Date()), TICK_INTERVAL_MS);
@@ -152,7 +157,7 @@ export default function App() {
         <button
           className="retry-button"
           type="button"
-          onClick={() => setLocationRequestId((value) => value + 1)}
+          onClick={requestLocation}
           disabled={isLocating}
         >
           {isLocating ? "Đang lấy vị trí..." : "Thử lại lấy vị trí"}
@@ -164,15 +169,42 @@ export default function App() {
 }
 
 async function fetchApproximateCoordsByIp(): Promise<Coordinates | null> {
+  const endpoints = [
+    "https://ipwho.is/",
+    "https://ipapi.co/json/",
+  ];
+
+  for (const endpoint of endpoints) {
+    const coords = await fetchCoordsFromEndpoint(endpoint);
+    if (coords) {
+      return coords;
+    }
+  }
+
+  return null;
+}
+
+async function fetchCoordsFromEndpoint(endpoint: string): Promise<Coordinates | null> {
   try {
-    const response = await fetch("https://ipapi.co/json/");
+    const response = await fetch(endpoint);
     if (!response.ok) {
       return null;
     }
 
-    const payload = (await response.json()) as { latitude?: unknown; longitude?: unknown };
-    const lat = Number(payload.latitude);
-    const lon = Number(payload.longitude);
+    const payload = (await response.json()) as {
+      latitude?: unknown;
+      longitude?: unknown;
+      lat?: unknown;
+      lon?: unknown;
+      success?: unknown;
+    };
+
+    if (payload.success === false) {
+      return null;
+    }
+
+    const lat = Number(payload.latitude ?? payload.lat);
+    const lon = Number(payload.longitude ?? payload.lon);
 
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
       return null;
