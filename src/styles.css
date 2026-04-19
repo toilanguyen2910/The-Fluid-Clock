@@ -1,0 +1,323 @@
+:root {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #f8f9ff;
+  background: #0e1229;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+.app {
+  --sky-top: #0f1230;
+  --sky-mid: #1f2b6c;
+  --sky-bottom: #4457a8;
+  min-height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 48%, var(--sky-bottom) 100%);
+  transition: background 3s ease;
+}
+
+.panel {
+  width: min(760px, 100%);
+  background: linear-gradient(160deg, rgba(8, 15, 36, 0.42), rgba(28, 42, 84, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 28px;
+  padding: clamp(18px, 3.2vw, 34px);
+  backdrop-filter: blur(14px) saturate(1.15);
+  box-shadow: 0 20px 48px rgba(8, 12, 28, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  z-index: 3;
+}
+
+.phase-label {
+  margin: 0 0 14px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: clamp(0.74rem, 1.5vw, 0.9rem);
+  opacity: 0.92;
+}
+
+.poem {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.2rem, 3.2vw, 2.05rem);
+  line-height: 1.72;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+  text-shadow: 0 6px 18px rgba(8, 12, 31, 0.3);
+}
+
+.helper,
+.altitude {
+  margin: 14px 0 0;
+  font-size: clamp(0.86rem, 1.9vw, 0.99rem);
+  line-height: 1.45;
+  opacity: 0.9;
+}
+
+.helper {
+  margin-top: clamp(16px, 2.5vw, 24px);
+}
+
+.cloud-layer {
+  position: absolute;
+  inset: -20% -35%;
+  background-image: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.22), transparent 35%),
+    radial-gradient(circle at 70% 25%, rgba(255, 255, 255, 0.19), transparent 32%),
+    radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.14), transparent 30%);
+  filter: blur(14px);
+  animation: drift 70s linear infinite;
+  z-index: 2;
+}
+
+.star-field {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 8% 24%, rgba(255, 255, 255, 0.82) 0 1px, transparent 2px),
+    radial-gradient(circle at 22% 62%, rgba(255, 255, 255, 0.72) 0 1.2px, transparent 2.4px),
+    radial-gradient(circle at 36% 12%, rgba(255, 255, 255, 0.75) 0 1.1px, transparent 2.5px),
+    radial-gradient(circle at 53% 38%, rgba(255, 255, 255, 0.7) 0 1px, transparent 2px),
+    radial-gradient(circle at 68% 19%, rgba(255, 255, 255, 0.68) 0 1.3px, transparent 2.6px),
+    radial-gradient(circle at 83% 54%, rgba(255, 255, 255, 0.78) 0 1.1px, transparent 2.4px),
+    radial-gradient(circle at 92% 28%, rgba(255, 255, 255, 0.68) 0 1px, transparent 2px);
+  opacity: 0;
+  animation: twinkle 6.5s ease-in-out infinite;
+  z-index: 0;
+}
+
+.star-field.second {
+  animation-duration: 9s;
+  animation-delay: -2.8s;
+}
+
+.celestial {
+  position: absolute;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  z-index: 1;
+  transition: opacity 2.4s ease, transform 3.2s ease;
+}
+
+.sun {
+  top: 14%;
+  right: 10%;
+  background: radial-gradient(circle at 40% 40%, #fff8d6 0%, #ffd779 35%, #fca44b 72%, transparent 100%);
+  box-shadow: 0 0 34px rgba(255, 200, 106, 0.48);
+  animation: floatSun 9s ease-in-out infinite;
+}
+
+.moon {
+  top: 16%;
+  right: 12%;
+  background: radial-gradient(circle at 36% 34%, #fffdfa 0%, #d9def8 48%, #8f95c9 100%);
+  box-shadow: -18px 0 0 0 rgba(12, 17, 40, 0.34) inset, 0 0 26px rgba(200, 213, 255, 0.38);
+  animation: floatMoon 12s ease-in-out infinite;
+}
+
+.cloud-layer.second {
+  opacity: 0.65;
+  animation-duration: 100s;
+  animation-direction: reverse;
+}
+
+.phase-dawn {
+  --sky-top: #2a355f;
+  --sky-mid: #fd9d7c;
+  --sky-bottom: #ffe2c6;
+}
+
+.phase-morning {
+  --sky-top: #6ba5ff;
+  --sky-mid: #8bc9ff;
+  --sky-bottom: #e9f6ff;
+}
+
+.phase-noon {
+  --sky-top: #4e99ff;
+  --sky-mid: #78bdff;
+  --sky-bottom: #d2edff;
+}
+
+.phase-afternoon {
+  --sky-top: #5e8be6;
+  --sky-mid: #7db3ea;
+  --sky-bottom: #f4d8a5;
+}
+
+.phase-sunset {
+  --sky-top: #4d4a80;
+  --sky-mid: #ff8f70;
+  --sky-bottom: #ffd19a;
+}
+
+.phase-dusk {
+  --sky-top: #2d2f61;
+  --sky-mid: #5d4f8f;
+  --sky-bottom: #8f7393;
+}
+
+.phase-night {
+  --sky-top: #0d1128;
+  --sky-mid: #1d2854;
+  --sky-bottom: #2b3a73;
+}
+
+.phase-night .star-field,
+.phase-dusk .star-field,
+.phase-dawn .star-field {
+  opacity: 0.85;
+}
+
+.phase-sunset .star-field,
+.phase-afternoon .star-field {
+  opacity: 0.2;
+}
+
+.phase-morning .star-field,
+.phase-noon .star-field {
+  opacity: 0;
+}
+
+.phase-night .moon,
+.phase-dusk .moon,
+.phase-dawn .moon {
+  opacity: 0.95;
+  transform: translateY(0);
+}
+
+.phase-morning .moon,
+.phase-noon .moon,
+.phase-afternoon .moon,
+.phase-sunset .moon {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.phase-dawn .sun,
+.phase-morning .sun,
+.phase-noon .sun,
+.phase-afternoon .sun,
+.phase-sunset .sun {
+  opacity: 0.95;
+  transform: translateY(0);
+}
+
+.phase-dusk .sun,
+.phase-night .sun {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.reduce-motion .cloud-layer {
+  animation: none;
+}
+
+.reduce-motion .star-field,
+.reduce-motion .sun,
+.reduce-motion .moon {
+  animation: none;
+}
+
+@media (max-width: 760px) {
+  .panel {
+    border-radius: 22px;
+    border-color: rgba(255, 255, 255, 0.34);
+  }
+
+  .poem {
+    line-height: 1.78;
+  }
+}
+
+@media (max-width: 520px) {
+  .app {
+    place-items: end center;
+  }
+
+  .panel {
+    width: min(100%, 520px);
+    margin-bottom: 4px;
+    border-radius: 20px;
+    backdrop-filter: blur(12px) saturate(1.1);
+  }
+
+  .phase-label {
+    margin-bottom: 10px;
+  }
+
+  .helper,
+  .altitude {
+    opacity: 0.94;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .app {
+    place-items: center;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .panel {
+    padding: 16px 20px;
+  }
+
+  .poem {
+    font-size: clamp(1rem, 2.2vw, 1.3rem);
+    line-height: 1.54;
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translateX(-8%);
+  }
+  to {
+    transform: translateX(8%);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes floatSun {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes floatMoon {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
