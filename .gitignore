@@ -13,3 +13,4 @@ vitest.config.d.ts
 .idea/copilotDiffState.xml
 
 
+.vercel
